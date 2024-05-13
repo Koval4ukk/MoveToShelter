@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>TrascapathianGovernmentMapSolutions</title>
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <!-- Mapbox GL JS -->
+    <script src="https://api.tiles.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js"></script>
+    <link
+      href="https://api.tiles.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.1/mapbox-gl-directions.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.1/mapbox-gl-directions.css"
+      type="text/css"
+    />
+    <!-- Mapbox Assembly -->
+    <link
+      href="https://api.mapbox.com/mapbox-assembly/v1.3.0/assembly.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://api.mapbox.com/mapbox-assembly/v1.3.0/assembly.js"></script>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+
+      .overlay-container {
+        position: absolute;
+        bottom: 20px;
+        /* Adjust this value as needed to control the distance from the bottom */
+        right: 20px;
+        /* Adjust this value as needed to control the distance from the right */
+      }
+
+      .mapboxgl-ctrl-directions.mapboxgl-ctrl {
+        display: none;
+      }
+    </style>
+    <script
+      src="https://js.sentry-cdn.com/9c5feb5b248b49f79a585804c259febc.min.js"
+      crossorigin="anonymous"
+    ></script>
+  </head>
+
+  <body>
+    <div id="menu">
+      <ul>
+        <div style="display: flex; gap: 20px">
+          <li id="pmd"><img src="img/safe.svg" /></li>
+          <p class="advice" id="pmdP">Найпростіші</p>
+        </div>
+        <div style="display: flex; gap: 20px">
+          <li id="psz"><img src="img/safety.svg" /></li>
+          <p class="advice" id="pszP">Сховища</p>
+        </div>
+        <div style="display: flex; gap: 20px">
+          <li id="smd"><img src="img/nuke.svg" /></li>
+          <p class="advice" id="smdP">Протирадіаційні</p>
+        </div>
+        <div style="display: flex; gap: 20px">
+          <li id="fop"><img src="img/region_hospital.svg" /></li>
+          <p class="advice" id="fopP">2 призначення</p>
+        </div>
+        <div style="display: flex; gap: 20px">
+          <li id="back"><img src="img/back.svg" /></li>
+          <p class="advice" id="backP">назад</p>
+        </div>
+        <form id="params">
+          <div class="click__type" style="display: flex; gap: 20px">
+            <label class="toggle-container">
+              <input name="profile" type="radio" value="walking" />
+              <li id="fop"><img src="img/walking.svg" /></li>
+              <p class="advice" id="backP">пішки</p>
+            </label>
+          </div>
+
+          <div class="click__type" style="display: flex; gap: 20px">
+            <label class="toggle-container">
+              <input name="profile" type="radio" value="cycling" checked />
+              <li id="fop"><img src="img/biking.svg" /></li>
+              <p class="advice" id="backP">велосипедом</p>
+            </label>
+          </div>
+
+          <div class="click__type" style="display: flex; gap: 20px">
+            <label class="toggle-container">
+              <input name="profile" type="radio" value="driving" />
+              <li id="fop"><img src="img/car.svg" /></li>
+              <p class="advice" id="backP">автомобілем</p>
+            </label>
+          </div>
+        </form>
+        <script>
+          // Ожидаем, пока DOM полностью загрузится
+          document.addEventListener("DOMContentLoaded", function () {
+            // Получаем все элементы с классом "click__type"
+            var clickElements = document.querySelectorAll(".click__type");
+
+            // Добавляем обработчик события на каждый элемент
+            clickElements.forEach(function (element) {
+              element.addEventListener("click", function () {
+                // Добавляем/удаляем класс "active" при нажатии
+                clickElements.forEach(function (el) {
+                  el.classList.remove("active");
+                });
+                element.classList.add("active");
+              });
+            });
+          });
+        </script>
+      </ul>
+    </div>
+    <div id="map"></div>
+    ////////////////////////////////////////////////overlay
+    <div
+      class="overlay-container absolute fl my24 mx24 py24 px24 bg-gray-faint round"
+    >
+      <!-- <form id="params">
+      <h4 class="txt-m txt-bold mb6">Куди можу дістатись:</h4>
+      <div class="mb12 mr12 toggle-group align-center">
+        <label class="toggle-container">
+          <input name="profile" type="radio" value="walking" />
+          <div class="toggle toggle--active-null toggle--null">пішки</div>
+        </label>
+        <label class="toggle-container">
+          <input name="profile" type="radio" value="cycling" checked />
+          <div class="toggle toggle--active-null toggle--null">велосипедом</div>
+        </label>
+        <label class="toggle-container">
+          <input name="profile" type="radio" value="driving" />
+          <div class="toggle toggle--active-null toggle--null">автомобілем</div>
+        </label>
+      </div>
+      <h4 class="txt-m txt-bold mb6">маючи в запасі:</h4>
+      <div class="mb12 mr12 toggle-group align-center">
+        <label class="toggle-container">
+          <input name="duration" type="radio" value="5" checked />
+          <div class="toggle toggle--active-null toggle--null">5 хв</div>
+        </label>
+        <label class="toggle-container">
+          <input name="duration" type="radio" value="10" />
+          <div class="toggle toggle--active-null toggle--null">10 хв</div>
+        </label>
+        <label class="toggle-container">
+          <input name="duration" type="radio" value="15" />
+          <div class="toggle toggle--active-null toggle--null">15 хв</div>
+        </label>
+      </div>
+    </form> -->
+    </div>
+    ////////////////////////////////////////////////////////////////
+    <script>
+      mapboxgl.accessToken =
+        "pk.eyJ1IjoiZGlneWRlcCIsImEiOiJjbGYxNDQwMTIwNHJkM3hyMGdzYzM0djFjIn0.7jGv0vgJNN3BdxdQZoQY4g";
+      const bounds = [
+        [22.06211, 47.86616], // Southwest coordinates
+        [24.7041023, 49.12407], // Northeast coordinates
+      ];
+      const map = new mapboxgl.Map({
+        container: "map", // container ID
+        // Choose from Mapbox's core styles, or make your own style with Mapbox Studio
+        style: "mapbox://styles/digydep/clin78i4o001g01qy6derfg1v", // style URL
+        center: [23.290417, 48.392914], // starting position [lng, lat]
+        zoom: 8, // starting zoom
+        maxBounds: bounds,
+      });
+      ////////////////////////////////////////////////////////
+      const geolocateControl = new mapboxgl.GeolocateControl({
+        positionOptions: {
+          enableHighAccuracy: true,
+        },
+        // When active the map will receive updates to the device's location as it changes.
+        trackUserLocation: true,
+        // Draw an arrow next to the location dot to indicate which direction the device is heading.
+        showUserHeading: true,
+      });
+      map.addControl(geolocateControl);
+
+      // Target the params form in the HTML
+      const params = document.getElementById("params");
+
+      // Create variables to use in getIso()
+      const urlBase = "https://api.mapbox.com/isochrone/v1/mapbox/";
+      let profile = "cycling";
+      let minutes = [5, 10, 15];
+      //3 random colors
+
+      // Set up a marker that you can use to show the query's coordinates
+      const marker = new mapboxgl.Marker({
+        color: "#314ccd",
+      });
+
+      // Create a function that sets up the Isochrone API query then makes a fetch call
+      async function getIso() {
+        const userLocation = geolocateControl._lastKnownPosition?.coords;
+        if (!userLocation) return; // User location not available yet, wait for it
+        const { longitude: lon, latitude: lat } = userLocation;
+
+        for (let index = 0; index < minutes.length; index++) {
+          const query = await fetch(
+            `${urlBase}${profile}/${lon},${lat}?contours_minutes=${minutes[index]}&polygons=true&access_token=${mapboxgl.accessToken}`,
+            { method: "GET" }
+          );
+          const data = await query.json();
+          // Set the 'iso' source's data to what's returned by the API query
+          map.getSource(`iso${minutes[index]}`).setData(data);
+        }
+      }
+
+      // When a user changes the value of profile or duration by clicking a button, change the parameter's value and make the API query again
+      params.addEventListener("change", (event) => {
+        console.dir(event.target);
+        if (event.target.name === "profile") {
+          profile = event.target.value;
+        }
+        // else if (event.target.name === "duration") {
+        //   minutes = event.target.value;
+        // }
+        getIso();
+      });
+
+      ////////////////////////////////////////////////////////
+
+      map.on("load", function () {
+        // Add a layer showing the state polygons.
+        // map.addLayer({
+        //     "id": 'smd'
+        // });
+
+        // map.setLayoutProperty('shelter', 'visibility', 'visible');
+        // map.addLayer({
+        //     "id": 'shelter',
+        // });
+
+        // map.setLayoutProperty('shelterdoubleuse', 'visibility', 'visible');
+        // map.addLayer({
+        //     "id": 'shelterdoubleuse'
+        // });
+        // map.setLayoutProperty('shelterantiradiation', 'visibility', 'visible');
+        // map.addLayer({
+        //     "id": 'shelterantiradiation'
+        // });
+        // map.setLayoutProperty('sheltersimplest', 'visibility', 'visible');
+        // map.addLayer({
+        //     "id": 'sheltersimplest'
+        // });
+        ///////////////////////////////////////////////////////////////
+        map.addSource("iso5", {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: [],
+          },
+        });
+        map.addSource("iso10", {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: [],
+          },
+        });
+        map.addSource("iso15", {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: [],
+          },
+        });
+
+        map.addLayer(
+          {
+            id: "isoLayer5",
+            type: "fill",
+            source: "iso5",
+            layout: {},
+            paint: {
+              "fill-color": "#5a3fc0",
+              "fill-opacity": 0.4,
+            },
+          },
+          "poi-label"
+        );
+        map.addLayer(
+          {
+            id: "isoLayer10",
+            type: "fill",
+            source: "iso10",
+            layout: {},
+            paint: {
+              "fill-color": "#cc314c",
+              "fill-opacity": 0.4,
+            },
+          },
+          "poi-label"
+        );
+        map.addLayer(
+          {
+            id: "isoLayer15",
+            type: "fill",
+            source: "iso15",
+            layout: {},
+            paint: {
+              "fill-color": "#4ccc31",
+              "fill-opacity": 0.4,
+            },
+          },
+          "poi-label"
+        );
+
+        // Initialize the marker at the query coordinates
+        marker.setLngLat({ lon: 0, lat: 0 }).addTo(map); // Use initial dummy location
+
+        // Make the API call
+        getIso();
+        ///////////////////////////////////////////////////////////////
+        const pmdButton = document.querySelector("#pmd");
+        pmdButton.addEventListener("mouseover", () => {
+          document.querySelector("#pmdP").style.opacity = "100%";
+        });
+        pmdButton.addEventListener("mouseleave", () => {
+          document.querySelector("#pmdP").style.opacity = "0%";
+        });
+
+        pmdButton.addEventListener("click", () => {
+          if (
+            map.getLayoutProperty("sheltersimplest", "visibility") === "visible"
+          ) {
+            map.setLayoutProperty("sheltersimplest", "visibility", "none");
+            document.querySelector("#pmd").style.opacity = "50%";
+          } else {
+            map.setLayoutProperty("sheltersimplest", "visibility", "visible");
+            document.querySelector("#pmd").style.opacity = "100%";
+          }
+        });
+
+        const smdButton = document.querySelector("#smd");
+
+        smdButton.addEventListener("mouseover", () => {
+          document.querySelector("#smdP").style.opacity = "100%";
+        });
+        smdButton.addEventListener("mouseleave", () => {
+          document.querySelector("#smdP").style.opacity = "0%";
+        });
+
+        smdButton.addEventListener("click", () => {
+          if (
+            map.getLayoutProperty("shelterantiradiation", "visibility") ===
+            "visible"
+          ) {
+            map.setLayoutProperty("shelterantiradiation", "visibility", "none");
+            document.querySelector("#smd").style.opacity = "50%";
+          } else {
+            map.setLayoutProperty(
+              "shelterantiradiation",
+              "visibility",
+              "visible"
+            );
+            document.querySelector("#smd").style.opacity = "100%";
+          }
+        });
+
+        const fopButton = document.querySelector("#fop");
+
+        fopButton.addEventListener("mouseover", () => {
+          document.querySelector("#fopP").style.opacity = "100%";
+        });
+        fopButton.addEventListener("mouseleave", () => {
+          document.querySelector("#fopP").style.opacity = "0%";
+        });
+
+        fopButton.addEventListener("click", () => {
+          if (
+            map.getLayoutProperty("shelterdoubleuse", "visibility") ===
+            "visible"
+          ) {
+            map.setLayoutProperty("shelterdoubleuse", "visibility", "none");
+            document.querySelector("#fop").style.opacity = "50%";
+          } else {
+            map.setLayoutProperty("shelterdoubleuse", "visibility", "visible");
+            document.querySelector("#fop").style.opacity = "100%";
+          }
+        });
+        //////////////////////////////////////////////////////
+        const pszButton = document.querySelector("#psz");
+
+        pszButton.addEventListener("mouseover", () => {
+          document.querySelector("#pszP").style.opacity = "100%";
+        });
+        pszButton.addEventListener("mouseleave", () => {
+          document.querySelector("#pszP").style.opacity = "0%";
+        });
+
+        pszButton.addEventListener("click", () => {
+          if (map.getLayoutProperty("shelter", "visibility") === "visible") {
+            map.setLayoutProperty("shelter", "visibility", "none");
+            document.querySelector("#psz").style.opacity = "50%";
+          } else {
+            map.setLayoutProperty("shelter", "visibility", "visible");
+            document.querySelector("#psz").style.opacity = "100%";
+          }
+        });
+        //////////////////////////////////////////////////////
+        const walkButton = document.querySelector("#walk");
+
+        // pszButton.addEventListener("mouseover", () => {
+        //   document.querySelector("#walkP").style.opacity = "100%";
+        // });
+        // pszButton.addEventListener("mouseleave", () => {
+        //   document.querySelector("#walkP").style.opacity = "0%";
+        // });
+
+        // pszButton.addEventListener("click", () => {
+        //   if (map.getLayoutProperty("shelter", "visibility") === "visible") {
+        //     map.setLayoutProperty("shelter", "visibility", "none");
+        //     // document.querySelector("#walkP").style.opacity = "50%";
+        //   } else {
+        //     map.setLayoutProperty("shelter", "visibility", "visible");
+        //     // document.querySelector("#walkP").style.opacity = "100%";
+        //   }
+        // });
+        //////////////////////////////////////////////////////
+
+        const backButton = document.querySelector("#back");
+
+        backButton.addEventListener("mouseover", () => {
+          document.querySelector("#backP").style.opacity = "100%";
+        });
+        backButton.addEventListener("mouseleave", () => {
+          document.querySelector("#backP").style.opacity = "0%";
+        });
+
+        backButton.addEventListener("click", () => {
+          map.flyTo({
+            //center: e.features[0].geometry.coordinates,
+            zoom: 9,
+            pitch: 0,
+            speed: 0.5,
+          });
+        });
+
+        //////////////////////////////////////////////////////////////
+        // Create a popup, but don't add it to the map yet.
+        const popup = new mapboxgl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+        });
+
+        const layers = [
+          "shelter",
+          "shelterdoubleuse",
+          "shelterantiradiation",
+          "sheltersimplest",
+        ];
+
+        map.on("mouseenter", layers, (e) => {
+          // Change the cursor style as a UI indicator.
+          map.getCanvas().style.cursor = "pointer";
+
+          // Copy coordinates array.
+          const coordinates = e.features[0].geometry.coordinates.slice();
+          let description =
+            e.features[0].properties["1"] +
+            "</p>" +
+            e.features[0].properties.City +
+            " " +
+            e.features[0].properties.Adress +
+            "</p>" +
+            e.features[0].properties.Name +
+            "</p>" +
+            e.features[0].properties.Type +
+            "</p>" +
+            "площа " +
+            e.features[0].properties.Area +
+            " кв.м" +
+            "</p>" +
+            "Місткість " +
+            e.features[0].properties.People +
+            " чол.";
+
+          // Ensure that if the map is zoomed out such that multiple
+          // copies of the feature are visible, the popup appears
+          // over the copy being pointed to.
+          while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+          }
+
+          // Populate the popup and set its coordinates
+          // based on the feature found.
+          popup.setLngLat(coordinates).setHTML(description).addTo(map);
+        });
+
+        map.on("mouseleave", layers, () => {
+          map.getCanvas().style.cursor = "";
+          popup.remove();
+        });
+
+        // map.on("click", layers, function (e) {
+        //   map.flyTo({
+        //     center: e.features[0].geometry.coordinates,
+        //     zoom: 18,
+        //     pitch: 80,
+        //     speed: 0.5,
+        //   });
+        // });
+
+        map.on("click", layers, function (e) {
+          const userLocation = geolocateControl._lastKnownPosition?.coords;
+
+          if (!userLocation) return;
+
+          const coordinates = e.features[0].geometry.coordinates.slice();
+          let description =
+            e.features[0].properties["1"] +
+            "</p>" +
+            e.features[0].properties.City +
+            " " +
+            e.features[0].properties.Adress +
+            "</p>" +
+            e.features[0].properties.Name +
+            "</p>" +
+            e.features[0].properties.Type +
+            "</p>" +
+            "площа " +
+            e.features[0].properties.Area +
+            " кв.м" +
+            "</p>" +
+            "Місткість " +
+            e.features[0].properties.People +
+            " чол.";
+
+          // Ensure that if the map is zoomed out such that multiple
+          // copies of the feature are visible, the popup appears
+          // over the copy being pointed to.
+          while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+          }
+
+          // Populate the popup and set its coordinates
+          // based on the feature found.
+          popup.setLngLat(coordinates).setHTML(description).addTo(map);
+          calculateRoute(profile, userLocation, coordinates);
+        });
+      });
+
+      function calculateRoute(profile, userLocation, shelterLocation) {
+        userLocation = [userLocation.longitude, userLocation.latitude];
+        let directions = new MapboxDirections({
+          accessToken: mapboxgl.accessToken,
+          unit: "metric", // Метрические единицы измерения
+          profile: `mapbox/${profile}`, // Профиль маршрута (велосипед)
+          controls: {
+            instructions: true, // Отображение инструкций
+          },
+        });
+
+        // Начальная и конечная точки
+        directions.setOrigin(userLocation);
+        directions.setDestination(shelterLocation);
+
+        // Запустить прокладывание маршрута
+        directions.on("route", function (e) {
+          if (e.route && e.route.length > 0) {
+            // Обработка результатов маршрута
+            var route = e.route[0]; // Получение первого маршрута
+            console.log("Маршрут:", route);
+            // Ваш код для обработки маршрута
+          } else {
+            console.error("Ошибка при прокладывании маршрута.");
+          }
+        });
+
+        if (document.querySelector(".mapboxgl-ctrl-directions")) {
+          map.removeControl(directions);
+        }
+
+        map.addControl(directions);
+      }
+
+      ///////////////////////////////////////////////////////
+      document.querySelector(".mapboxgl-ctrl-bottom-right").innerHTML =
+        "Розробка Закарпатської ОВА (С)";
+      document.querySelector(".mapboxgl-ctrl-bottom-left").innerHTML =
+        '<img class="logo" src="img/logo.png">';
+      document.querySelector(".logo").style.zIndex = "1000";
+      document.querySelector(".logo").style.width = "15%";
+      document.querySelector(".logo").style.opacity = "75%";
+      document.querySelector(".logo").style.paddingLeft = "40px";
+      document.querySelector(".logo").style.paddingBottom = "40px";
+    </script>
+  </body>
+</html>
